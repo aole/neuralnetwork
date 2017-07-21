@@ -1,6 +1,7 @@
 package aole;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 
 import org.jfree.data.category.CategoryDataset;
@@ -13,18 +14,38 @@ public class Network {
 
 	ArrayList<Layer> layers = new ArrayList<>();
 	Layer outputLayer, inputLayer;
+	int currentRow = -1;
 
-	int data[][];
+	double data[][];
 	int target[][];
-	double learningRate = 1;
+	String labels[];
+	double learningRate = .2;
+	int totalTraining = 0;
 
-	public Network(int inputs[][], int hiddens, int outputs[][]) {
+	public Network(double inputs[][], int hiddens, int outputs[][]) {
 		data = inputs;
 		target = outputs;
 
 		outputLayer = new Layer(Layer.OUTPUT, outputs[0].length);
 		Layer hl = new Layer(Layer.HIDDEN, hiddens, outputLayer);
 		inputLayer = new Layer(Layer.INPUT, inputs[0].length, hl);
+		layers.add(inputLayer);
+		layers.add(hl);
+		layers.add(outputLayer);
+	}
+
+	public void init(double[][] inputData, int numHidden, String[] targetLabels, int[][] targetData) {
+		data = inputData;
+		target = targetData;
+		labels = targetLabels;
+		totalTraining = 0;
+		errors.clear();
+
+		outputLayer = new Layer(Layer.OUTPUT, targetData[0].length, null, targetLabels);
+		Layer hl = new Layer(Layer.HIDDEN, numHidden, outputLayer);
+		inputLayer = new Layer(Layer.INPUT, inputData[0].length, hl);
+
+		layers.clear();
 		layers.add(inputLayer);
 		layers.add(hl);
 		layers.add(outputLayer);
@@ -42,9 +63,9 @@ public class Network {
 		listeners.add(l);
 	}
 
-	private void notifyListeners(int epoch, int target, double error) {
+	private void notifyListeners(int epoch, String msg, double error) {
 		for (NetworkListener nl : listeners) {
-			nl.networkUpdated(epoch, target, error);
+			nl.networkUpdated(epoch, msg, error);
 		}
 	}
 
@@ -52,11 +73,14 @@ public class Network {
 		Layer il, ol;
 		double error = 0;
 		int dn = 0;
-		for (int epn = 0; epn < count; epn++) {
-			dn = epn % data.length;
+		int finalcount = count + totalTraining;
+		for (; totalTraining < finalcount; totalTraining++) {
+			dn = totalTraining % data.length;
 			// set input data
 			il = inputLayer;// layers.get(0);
 			il.setOutputs(data[dn]);
+			// System.out.println(Arrays.toString(data[dn]) + " = " +
+			// Arrays.toString(target[dn]));
 			// feed forward
 			for (int ln = 1; ln < layers.size(); ln++) {
 				ol = layers.get(ln);
@@ -76,12 +100,16 @@ public class Network {
 				il.calculateError(ol);
 				ol = il;
 			}
-			if (epn % updateEvery == 0) {
-				errors.addValue(Math.abs(error), "Error", errorcount++ + "");
-				notifyListeners(epn, target[dn][0], error);
+			if (totalTraining % updateEvery == 0) {
+				errors.addValue(error, "Error", errorcount++ + "");
+				currentRow = dn;
+				notifyListeners(totalTraining,
+						"(" + totalTraining + ") " + Arrays.toString(data[dn]) + " = " + Arrays.toString(target[dn]),
+						error);
 			}
 		}
-		notifyListeners(count, target[dn][0], error);
+		// notifyListeners(totalTraining, Arrays.toString(data[dn]) + " = " +
+		// Arrays.toString(target[dn]), error);
 	}
 
 	public CategoryDataset getErrorDataset() {
@@ -90,7 +118,8 @@ public class Network {
 
 	public void resetWeights() {
 		Random random = new Random();
-
+		totalTraining = 0;
+		
 		for (Layer l : layers) {
 			for (Node n : l.nodes) {
 				for (int i = 0; i < n.weights.size(); i++) {

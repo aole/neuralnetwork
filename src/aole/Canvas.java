@@ -53,7 +53,9 @@ public class Canvas extends JPanel {
 		}
 		// draw connections
 		for (Layer l : network.layers) {
-			for (Node n : l.nodes) {
+			for (int nn = 0; nn < l.nodes.size(); nn++) {
+				Node n = l.nodes.get(nn);
+				// for (Node n : l.nodes) {
 				for (int no = 0; no < n.outNodes.size(); no++) {
 					Node o = n.outNodes.get(no);
 					double weight = n.weights.get(no);
@@ -70,12 +72,12 @@ public class Canvas extends JPanel {
 					g.setColor(Color.black);
 					g.drawString(sweight, n.locx + (o.locx - n.locx) / 4, n.locy + (o.locy - n.locy) / 4);
 				}
-				drawNode(g, n);
+				drawNode(g, n, l.type, nn);
 			}
 		}
 	}
 
-	private void drawNode(Graphics2D g, Node n) {
+	private void drawNode(Graphics2D g, Node n, int type, int nn) {
 		g.setStroke(strokes[1]);
 		g.setColor(Color.white);
 		g.fillRect(n.locx - 20, n.locy - 10, 40, 20);
@@ -89,6 +91,17 @@ public class Canvas extends JPanel {
 			output = (double) ((int) (n.output * 100) / 100.0) + "";
 
 		g.setColor(Color.black);
-		g.drawString(output, n.locx-10, n.locy+5);
+		if (type == Layer.INPUT && !n.isBias)
+			g.drawString(output, n.locx - 50, n.locy + 5);
+		else
+			g.drawString(output, n.locx - 10, n.locy + 5);
+
+		if (type == Layer.OUTPUT) {
+			String label = n.label;
+			if (network.currentRow != -1)
+				if (network.target[network.currentRow][nn] == 1)
+					label += " *";
+			g.drawString(label, n.locx + 25, n.locy + 5);
+		}
 	}
 }

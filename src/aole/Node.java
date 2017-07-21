@@ -12,13 +12,19 @@ public class Node {
 	double input;
 	double derivative;
 	boolean isBias;
+	String label;
 
 	public Node(Layer inputlayer) {
 		this(inputlayer, false);
 	}
 
 	public Node(Layer inputlayer, boolean b) {
+		this(inputlayer, b, "");
+	}
+
+	public Node(Layer inputlayer, boolean b, String label) {
 		isBias = b;
+		this.label = label;
 		Random random = new Random();
 
 		if (inputlayer != null) {

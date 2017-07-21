@@ -1,5 +1,6 @@
 package aole;
 
 public interface NetworkListener {
-	public void networkUpdated(int epoch, int target, double error);
+	public void networkUpdated(int epoch, String msg, double error);
+	public void networkUpdated();
 }

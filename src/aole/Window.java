@@ -55,9 +55,9 @@ public class Window extends JFrame implements NetworkListener {
 	}
 
 	@Override
-	public void networkUpdated(int epoch, int target, double error) {
+	public void networkUpdated(int epoch, String msg, double error) {
 		canvas.repaint();
-		lblStatus.setText(epoch + " | " + target + ".. " + Math.round(Math.abs(error) * 100) + "%");
+		lblStatus.setText(msg + ".. " + Math.round(error * 100) + "%");
 	}
 
 	public void networkUpdated() {

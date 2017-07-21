@@ -9,16 +9,27 @@ public class Layer {
 	public static final int OUTPUT = 3;
 
 	ArrayList<Node> nodes = new ArrayList<>();
+	int type;
 
 	public Layer(int type, int num) {
-		this(type, num, null);
+		this(type, num, (Layer) null);
 	}
 
 	public Layer(int type, int num, Layer outputlayer) {
+		this(type, num, outputlayer, null);
+	}
+
+	public Layer(int type, int num, Layer outputlayer, String[] targetLabel) {
+		this.type = type;
 		for (int i = 0; i < num; i++) {
-			Node n = new Node(outputlayer);
+			Node n;
+			if (targetLabel != null)
+				n = new Node(outputlayer, false, targetLabel[i]);
+			else
+				n = new Node(outputlayer);
 			nodes.add(n);
 		}
+		// add a bias, except in case of an output layer
 		if (type != OUTPUT) {
 			nodes.add(new Node(outputlayer, true));
 		}
@@ -28,7 +39,7 @@ public class Layer {
 		return nodes.size();
 	}
 
-	public void setOutputs(int[] data) {
+	public void setOutputs(double[] data) {
 		for (int nn = 0; nn < nodes.size(); nn++) {
 			Node n = nodes.get(nn);
 			if (!n.isBias)
@@ -69,7 +80,7 @@ public class Layer {
 			Node n = nodes.get(nn);
 			double error = target[nn] - n.output;
 			n.derivative = error * n.output * (1.0 - n.output);
-			globalerror += error;
+			globalerror += Math.abs(error);
 		}
 		return globalerror;
 	}

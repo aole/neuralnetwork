@@ -4,9 +4,12 @@ import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Hashtable;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
@@ -14,6 +17,7 @@ import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -43,7 +47,7 @@ public class LoadDialog extends JDialog {
 		JPanel panelFile = new JPanel(new BorderLayout());
 		add(panelFile, BorderLayout.NORTH);
 
-		txtFile = new JTextField("C:\\Users\\baole\\Downloads\\iris.data", 40);
+		txtFile = new JTextField("iris.data", 40);
 		panelFile.add(txtFile, BorderLayout.CENTER);
 
 		JPanel panelFileBtn = new JPanel();
@@ -69,6 +73,8 @@ public class LoadDialog extends JDialog {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				data.clear();
+				targetModel.removeAllElements();
 				BufferedReader br = null;
 				try {
 					String line = "";
@@ -79,13 +85,15 @@ public class LoadDialog extends JDialog {
 							continue;
 						data.add(line.split(cvsSplitBy));
 					}
-					tableModel.fireTableStructureChanged();
 					String s = null;
 					for (int i = 0; i < data.get(0).length; i++) {
 						s = "Column " + (i + 1);
 						targetModel.addElement(s);
 					}
 					targetModel.setSelectedItem(s);
+				} catch (FileNotFoundException fnfe) {
+					JOptionPane.showMessageDialog(null, "File not found! " + txtFile.getText(), "Load CSV",
+							JOptionPane.ERROR_MESSAGE);
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				} finally {
@@ -96,6 +104,7 @@ public class LoadDialog extends JDialog {
 							e1.printStackTrace();
 						}
 				}
+				tableModel.fireTableStructureChanged();
 			}
 		});
 
@@ -105,7 +114,6 @@ public class LoadDialog extends JDialog {
 		btn = new JButton("OK");
 		panelExit.add(btn);
 		btn.addActionListener(new ActionListener() {
-
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				isOK = true;
@@ -116,11 +124,20 @@ public class LoadDialog extends JDialog {
 		btn = new JButton("Cancel");
 		panelExit.add(btn);
 		btn.addActionListener(new ActionListener() {
-
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				isOK = false;
 				dispose();
+			}
+		});
+
+		btn = new JButton("Shuffle");
+		panelExit.add(btn);
+		btn.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				Collections.shuffle(data);
+				tableModel.fireTableDataChanged();
 			}
 		});
 
@@ -190,19 +207,45 @@ public class LoadDialog extends JDialog {
 		return isOK;
 	}
 
-	public int[][] getData() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	public void setNetwork(Network network) {
+		//Collections.shuffle(data);
 
-	public int getHidden() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+		int target = targetModel.getIndexOf(targetModel.getSelectedItem());
+		double inputdata[][] = new double[data.size()][];
+		int targetdata[][] = new int[data.size()][];
+		int numinput = data.get(0).length - 1;
 
-	public int[][] getTarget() {
-		// TODO Auto-generated method stub
-		return null;
+		// create target dictionary
+		Hashtable<String, Integer> d = new Hashtable<>();
+
+		for (String[] row : data) {
+			d.put(row[target], 0);
+		}
+		int numoutput = 0;
+		for (String key : d.keySet()) {
+			d.put(key, numoutput++);
+		}
+
+		// parse input and output data
+		for (int row = 0; row < data.size(); row++) {
+			String rowdata[] = data.get(row);
+			inputdata[row] = new double[numinput];
+			targetdata[row] = new int[numoutput];
+			int i = 0;
+			for (int col = 0; col < rowdata.length; col++) {
+				if (col != target) {
+					inputdata[row][i] = Double.parseDouble(rowdata[col]);
+					i++;
+				} else {
+					for (int j = 0; j < numoutput; j++) {
+						targetdata[row][j] = 0;
+					}
+					targetdata[row][d.get(rowdata[col])] = 1;
+				}
+			}
+		}
+
+		network.init(inputdata, numinput, (String[]) d.keySet().toArray(new String[0]), targetdata);
 	}
 
 }
