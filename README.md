@@ -1,5 +1,7 @@
 # Neural Network
-Neural Network
+Neural Network in Java
+
+![Screenshot](screenshot.jpg?raw=true)
 
 Dependencies
 ------------
