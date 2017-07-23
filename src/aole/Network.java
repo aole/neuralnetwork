@@ -1,5 +1,6 @@
 package aole;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
@@ -16,11 +17,16 @@ public class Network {
 	Layer outputLayer, inputLayer;
 	int currentRow = -1;
 
-	double data[][];
+	double data[][], train[][], test[][];
 	int target[][];
 	String labels[];
 	double learningRate = .2;
 	int totalTraining = 0;
+	private int numtrain;
+	private int epoch;
+	double result;
+
+	static DecimalFormat df = new DecimalFormat("#.####");
 
 	public Network(double inputs[][], int hiddens, int outputs[][]) {
 		data = inputs;
@@ -63,10 +69,20 @@ public class Network {
 		listeners.add(l);
 	}
 
-	private void notifyListeners(int epoch, String msg, double error) {
+	private void notifyListeners(String msg) {
 		for (NetworkListener nl : listeners) {
-			nl.networkUpdated(epoch, msg, error);
+			nl.networkUpdated(msg);
 		}
+	}
+
+	private static String arrayToString(double d[]) {
+		String s = "[";
+
+		for (double dbl : d) {
+			s += df.format(dbl) + ", ";
+		}
+		s = s.substring(0, s.length() - 2);
+		return s + "]";
 	}
 
 	public void trainTo(int count, int updateEvery) {
@@ -77,10 +93,8 @@ public class Network {
 		for (; totalTraining < finalcount; totalTraining++) {
 			dn = totalTraining % data.length;
 			// set input data
-			il = inputLayer;// layers.get(0);
+			il = inputLayer;
 			il.setOutputs(data[dn]);
-			// System.out.println(Arrays.toString(data[dn]) + " = " +
-			// Arrays.toString(target[dn]));
 			// feed forward
 			for (int ln = 1; ln < layers.size(); ln++) {
 				ol = layers.get(ln);
@@ -90,7 +104,7 @@ public class Network {
 				il = ol;
 			}
 			// back propagate
-			ol = outputLayer; // layers.get(layers.size() - 1);
+			ol = outputLayer;
 			// output layer calculate distance to target
 			error = ol.calculateError(target[dn]);
 
@@ -103,23 +117,19 @@ public class Network {
 			if (totalTraining % updateEvery == 0) {
 				errors.addValue(error, "Error", errorcount++ + "");
 				currentRow = dn;
-				notifyListeners(totalTraining,
-						"(" + totalTraining + ") " + Arrays.toString(data[dn]) + " = " + Arrays.toString(target[dn]),
-						error);
+				notifyListeners("(" + dn + ") " + arrayToString(data[dn]) + " = " + Arrays.toString(target[dn]));
 			}
 		}
-		// notifyListeners(totalTraining, Arrays.toString(data[dn]) + " = " +
-		// Arrays.toString(target[dn]), error);
 	}
 
 	public CategoryDataset getErrorDataset() {
 		return errors;
 	}
 
-	public void resetWeights() {
-		Random random = new Random();
+	public void resetWeights(int seed) {
+		Random random = new Random(seed);
 		totalTraining = 0;
-		
+
 		for (Layer l : layers) {
 			for (Node n : l.nodes) {
 				for (int i = 0; i < n.weights.size(); i++) {
@@ -129,4 +139,73 @@ public class Network {
 		}
 	}
 
+	public void setParameters(int epoch, double percent) {
+		this.epoch = epoch;
+		numtrain = (int) (data.length * percent);
+		train = new double[numtrain][];
+		test = new double[data.length - numtrain][];
+		System.arraycopy(data, 0, train, 0, numtrain);
+		System.arraycopy(data, numtrain, test, 0, data.length - numtrain);
+	}
+
+	public void trainAndTest() {
+		Layer il, ol;
+		// training
+		for (int epochn = 0; epochn < epoch; epochn++) {
+			for (int dn = 0; dn < train.length; dn++) {
+				// set input data
+				il = inputLayer;
+				il.setOutputs(train[dn]);
+
+				// feed forward
+				for (int ln = 1; ln < layers.size(); ln++) {
+					ol = layers.get(ln);
+					ol.resetInputs();
+					il.feedForward(ol);
+					ol.transfer();
+					il = ol;
+				}
+				// back propagate
+				ol = outputLayer;
+				ol.calculateError(target[dn]);
+				for (int bln = layers.size() - 2; bln >= 0; bln--) {
+					il = layers.get(bln);
+					il.backpropagate(ol, learningRate);
+					il.calculateError(ol);
+					ol = il;
+				}
+				currentRow = dn;
+			}
+		}
+		totalTraining = epoch * train.length;
+
+		// testing
+		int numcorrect = 0;
+		for (int dn = 0; dn < test.length; dn++) {
+			// set input data
+			il = inputLayer;
+			il.setOutputs(test[dn]);
+			for (int ln = 1; ln < layers.size(); ln++) {
+				ol = layers.get(ln);
+				ol.resetInputs();
+				il.feedForward(ol);
+				ol.transfer();
+				il = ol;
+			}
+			currentRow = numtrain + dn;
+
+			double outs[] = outputLayer.getOutputs();
+			System.out.println((currentRow + 1) + ":" + Arrays.toString(outs));
+			for (int i = 0; i < outs.length; i++) {
+				if ((outs[i] > 0.5 ? 1 : 0) != target[numtrain + dn][i]) {
+					numcorrect--;
+					break;
+				}
+			}
+			numcorrect++;
+		}
+		double result = Math.round((numcorrect * 10000) / (double) test.length) / 100.0;
+		String msg = "Success rate (" + numcorrect + "/" + test.length + "): " + result;
+		notifyListeners(msg);
+	}
 }

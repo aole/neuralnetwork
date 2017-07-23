@@ -8,6 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Hashtable;
 
@@ -29,7 +30,7 @@ public class LoadDialog extends JDialog {
 	private static final long serialVersionUID = 1L;
 
 	private boolean isOK;
-	private ArrayList<String[]> data = new ArrayList<>();
+	private ArrayList<Object[]> data = new ArrayList<>();
 
 	private JTextField txtFile;
 
@@ -83,7 +84,11 @@ public class LoadDialog extends JDialog {
 					while ((line = br.readLine()) != null) {
 						if (line.trim().equals(""))
 							continue;
-						data.add(line.split(cvsSplitBy));
+						// dont store it as String array
+						String ssl[] = line.split(cvsSplitBy);
+						Object splitline[] = new Object[ssl.length];
+						System.arraycopy(ssl, 0, splitline, 0, ssl.length);
+						data.add(splitline);
 					}
 					String s = null;
 					for (int i = 0; i < data.get(0).length; i++) {
@@ -141,6 +146,49 @@ public class LoadDialog extends JDialog {
 			}
 		});
 
+		btn = new JButton("Normalize");
+		panelExit.add(btn);
+		btn.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				double min[] = new double[data.get(0).length];
+				double max[] = new double[data.get(0).length];
+				boolean use[] = new boolean[data.get(0).length];
+				Arrays.fill(min, Double.MAX_VALUE);
+				Arrays.fill(max, Double.MIN_VALUE);
+				Arrays.fill(use, true);
+
+				// find min and max value for each field
+				// also find the fields that are numeric
+				for (Object[] d : data) {
+					for (int i = 0; i < d.length; i++) {
+						if (!use[i])
+							continue;
+						try {
+							double val = Double.parseDouble(d[i].toString());
+							d[i] = (Object) val;
+							if (val < min[i])
+								min[i] = val;
+							if (val > max[i])
+								max[i] = val;
+						} catch (Exception ex) {
+							use[i] = false;
+						}
+					}
+				}
+				// replace data with nomalized data
+				tableModel.fireTableDataChanged();
+				for (Object[] d : data) {
+					for (int i = 0; i < d.length; i++) {
+						if (!use[i])
+							continue;
+						d[i] = ((double) d[i] - min[i]) / (max[i] - min[i]);
+					}
+				}
+				tableModel.fireTableDataChanged();
+			}
+		});
+
 		isOK = false;
 
 		tableModel = new AbstractTableModel() {
@@ -149,7 +197,7 @@ public class LoadDialog extends JDialog {
 
 			@Override
 			public Object getValueAt(int rowIndex, int columnIndex) {
-				String value = "";
+				Object value = null;
 				if (columnIndex == 0)
 					return rowIndex + 1;
 				try {
@@ -208,7 +256,7 @@ public class LoadDialog extends JDialog {
 	}
 
 	public void setNetwork(Network network) {
-		//Collections.shuffle(data);
+		// Collections.shuffle(data);
 
 		int target = targetModel.getIndexOf(targetModel.getSelectedItem());
 		double inputdata[][] = new double[data.size()][];
@@ -216,25 +264,25 @@ public class LoadDialog extends JDialog {
 		int numinput = data.get(0).length - 1;
 
 		// create target dictionary
-		Hashtable<String, Integer> d = new Hashtable<>();
+		Hashtable<Object, Integer> d = new Hashtable<>();
 
-		for (String[] row : data) {
+		for (Object[] row : data) {
 			d.put(row[target], 0);
 		}
 		int numoutput = 0;
-		for (String key : d.keySet()) {
+		for (Object key : d.keySet()) {
 			d.put(key, numoutput++);
 		}
 
 		// parse input and output data
 		for (int row = 0; row < data.size(); row++) {
-			String rowdata[] = data.get(row);
+			Object rowdata[] = data.get(row);
 			inputdata[row] = new double[numinput];
 			targetdata[row] = new int[numoutput];
 			int i = 0;
 			for (int col = 0; col < rowdata.length; col++) {
 				if (col != target) {
-					inputdata[row][i] = Double.parseDouble(rowdata[col]);
+					inputdata[row][i] = Double.parseDouble(rowdata[col] + "");
 					i++;
 				} else {
 					for (int j = 0; j < numoutput; j++) {

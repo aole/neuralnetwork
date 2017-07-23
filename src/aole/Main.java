@@ -37,15 +37,20 @@ public class Main implements ActionListener {
 			network.trainTo(1, 1);
 			break;
 		case "reset":
-			network.resetWeights();
-			window.networkUpdated();
+			network.resetWeights(4);
+			window.networkUpdated("");
+			break;
+		case "TnT":
+			network.setParameters(window.getEpoch(), window.getPercent());
+			network.resetWeights(4);
+			network.trainAndTest();
 			break;
 		case "load":
 			LoadDialog ld = new LoadDialog(window);
 			ld.setVisible(true);
 			if (ld.isOKtoLoad()) {
 				ld.setNetwork(network);
-				window.networkUpdated();
+				window.networkUpdated("");
 			}
 			break;
 		case "analysis":

@@ -68,9 +68,9 @@ public class Canvas extends JPanel {
 					linesize = linesize > 10 ? 10 : linesize;
 					g.setStroke(strokes[linesize]);
 					g.drawLine(n.locx, n.locy, o.locx, o.locy);
-					String sweight = (double) ((int) (weight * 100)) / 100.0 + "";
-					g.setColor(Color.black);
-					g.drawString(sweight, n.locx + (o.locx - n.locx) / 4, n.locy + (o.locy - n.locy) / 4);
+					//String sweight = (double) ((int) (weight * 100)) / 100.0 + "";
+					//g.setColor(Color.black);
+					//g.drawString(sweight, n.locx + (o.locx - n.locx) / 4, n.locy + (o.locy - n.locy) / 4);
 				}
 				drawNode(g, n, l.type, nn);
 			}

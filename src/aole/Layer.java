@@ -110,4 +110,11 @@ public class Layer {
 			}
 		}
 	}
+
+	public double[] getOutputs() {
+		double outs[] = new double[nodes.size()];
+		for (int o = 0; o < nodes.size(); o++)
+			outs[o] = nodes.get(o).output;
+		return outs;
+	}
 }
